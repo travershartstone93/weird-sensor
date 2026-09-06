@@ -1,0 +1,6 @@
+vmlinux.h
+*.o
+*.skel.h
+weird-sensor
+weird-sensor-static
+tests/test_json

@@ -1,0 +1,32 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm libbpf-dev libelf-dev zlib1g-dev \
+            linux-tools-common linux-tools-generic python3
+          sudo apt-get install -y "linux-tools-$(uname -r)" || true
+
+      - name: Find bpftool
+        run: |
+          B=$(ls /usr/lib/linux-tools/*/bpftool 2>/dev/null | head -n1)
+          [ -n "$B" ] || B=$(command -v bpftool)
+          echo "BPFTOOL=$B" >> "$GITHUB_ENV"
+          "$B" version
+
+      - name: Build
+        run: make BPFTOOL="$BPFTOOL"
+
+      - name: Unit tests
+        run: make test
+
+      - name: Live test
+        run: sudo make test-live

@@ -1,0 +1,45 @@
+[Unit]
+Description=weird-sensor eBPF process event collector
+Documentation=https://github.com/travershartstone93/weird-sensor
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/bin/weird-sensor --hello
+ExecStart=/usr/local/bin/weird-sensor
+StandardOutput=append:/run/weird/events.ndjson
+StandardError=journal
+RuntimeDirectory=weird
+RuntimeDirectoryMode=0755
+ReadWritePaths=/run/weird
+UMask=0022
+Restart=on-failure
+RestartSec=2
+
+# CAP_BPF and CAP_PERFMON cover bpf() and tracepoint attach on kernels 5.8
+# and later. Older kernels check CAP_SYS_ADMIN for both; add it to the set
+# below if the unit fails with "Operation not permitted" on such a kernel.
+# libbpf also reads /sys/kernel/tracing/events/*/*/id to find tracepoints,
+# which the sandbox below leaves readable.
+CapabilityBoundingSet=CAP_BPF CAP_PERFMON CAP_SYS_RESOURCE
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateNetwork=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictAddressFamilies=none
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

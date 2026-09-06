@@ -1,0 +1,7 @@
+CompileFlags:
+  Add: [-Isrc, -I.]
+---
+If:
+  PathMatch: src/sensor\.bpf\.c
+CompileFlags:
+  Add: [-target, bpf, -D__TARGET_ARCH_x86, -Wno-missing-declarations]
