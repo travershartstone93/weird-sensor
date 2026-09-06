@@ -107,13 +107,16 @@ else
 	skip connect "tracepoint sock/inet_sock_set_state missing"
 fi
 
-if tp syscalls/sys_enter_bpf && command -v bpftool >/dev/null; then
-	bpftool prog show >/dev/null 2>&1 &
-	BPID=$!
-	wait "$BPID"
-	expect bpf "\"kind\":\"bpf\",\"pid\":$BPID,"
+if tp syscalls/sys_enter_bpf; then
+	# BPF_PROG_GET_NEXT_ID (12) with a zeroed attr: the call fails harmlessly, the tracepoint still fires
+	BPID=$(python3 -c 'import ctypes, os
+libc = ctypes.CDLL(None, use_errno=True)
+attr = ctypes.create_string_buffer(128)
+libc.syscall(321, 12, attr, 128)
+print(os.getpid())')
+	expect bpf "\"kind\":\"bpf\",\"pid\":$BPID,.*\"cmd\":12"
 else
-	skip bpf "tracepoint syscalls/sys_enter_bpf or bpftool missing"
+	skip bpf "tracepoint syscalls/sys_enter_bpf missing"
 fi
 
 skip module "no harmless module load to trigger; checked by hand with modprobe"
