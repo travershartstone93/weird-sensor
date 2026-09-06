@@ -91,7 +91,9 @@ else
 	skip ptrace "tracepoint syscalls/sys_enter_ptrace missing"
 fi
 
-if tp sock/inet_sock_set_state; then
+if grep -q "connect events disabled" "$ERR"; then
+	skip connect "kernel rejected on_connect (see stderr)"
+elif tp sock/inet_sock_set_state; then
 	CPID=$(python3 -c 'import os, socket
 s = socket.socket()
 s.settimeout(1)

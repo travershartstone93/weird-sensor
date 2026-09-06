@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,6 +117,12 @@ static void usage(FILE *out)
 	fprintf(out, "usage: weird-sensor [--hello] [--version] [--no-connect]\n");
 }
 
+static int debug_print(enum libbpf_print_level level, const char *fmt, va_list args)
+{
+	(void)level;
+	return vfprintf(stderr, fmt, args);
+}
+
 int main(int argc, char **argv)
 {
 	struct bpf_link *links[MAX_LINKS] = { 0 };
@@ -146,6 +153,8 @@ int main(int argc, char **argv)
 		}
 	}
 
+	if (getenv("WEIRD_SENSOR_DEBUG"))
+		libbpf_set_print(debug_print);
 	if (geteuid() != 0) {
 		fprintf(stderr, "weird-sensor: must run as root (loading BPF programs needs CAP_BPF and CAP_PERFMON)\n");
 		return 3;
@@ -161,6 +170,20 @@ int main(int argc, char **argv)
 		bpf_program__set_autoload(skel->progs.on_connect, false);
 
 	err = sensor_bpf__load(skel);
+	if (err && !no_connect) {
+		/* Some kernels reject the socket tracepoint program; keep the rest running. */
+		fprintf(stderr, "weird-sensor: kernel rejected on_connect (%s), connect events disabled\n",
+			strerror(-err));
+		sensor_bpf__destroy(skel);
+		skel = sensor_bpf__open();
+		if (!skel) {
+			fprintf(stderr, "weird-sensor: opening BPF object failed: %s\n", strerror(errno));
+			return 3;
+		}
+		skel->rodata->own_tgid = getpid();
+		bpf_program__set_autoload(skel->progs.on_connect, false);
+		err = sensor_bpf__load(skel);
+	}
 	if (err) {
 		fprintf(stderr, "weird-sensor: loading BPF programs failed: %s (libbpf messages above)\n",
 			strerror(-err));

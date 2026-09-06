@@ -186,9 +186,9 @@ int on_connect(struct trace_event_raw_inet_sock_set_state *ctx)
 	e->u.connect.family = ctx->family;
 	e->u.connect.dport = ctx->dport;
 	if (ctx->family == AF_INET6)
-		__builtin_memcpy(e->u.connect.daddr, ctx->daddr_v6, 16);
+		bpf_probe_read_kernel(e->u.connect.daddr, 16, ctx->daddr_v6);
 	else
-		__builtin_memcpy(e->u.connect.daddr, ctx->daddr, 4);
+		bpf_probe_read_kernel(e->u.connect.daddr, 4, ctx->daddr);
 	bpf_ringbuf_submit(e, 0);
 	return 0;
 }
